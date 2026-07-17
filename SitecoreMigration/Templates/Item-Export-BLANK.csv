@@ -1,0 +1,2 @@
+ItemID,ItemName,ItemPath,TemplateName,TemplateID,ChildCount,VersionCount,FieldCount,TargetPath,TargetTemplate,TargetName,MigrateChildren,Status,Notes
+{PASTE-GUID},Example Item,/Tenant/Example,ES Template,{PASTE-GUID},0,1,45,/Global/Content,{TARGET-GUID},Example Item,Y,PENDING,Paste data from Step 2 output

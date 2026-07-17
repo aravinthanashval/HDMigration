@@ -1,0 +1,23 @@
+# Migration outputs
+SitecoreMigration/Outputs/
+SitecoreMigration/Mappings/*.xlsx
+SitecoreMigration/Mappings/*.csv
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# Local environment
+.env
+.env.local

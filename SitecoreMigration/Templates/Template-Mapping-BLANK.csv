@@ -1,0 +1,10 @@
+SourceTemplateName,SourceTemplateID,TargetTemplateName,TargetTemplateID,Notes
+Example: ES Home,{PASTE-ID-HERE},Global Home,{PASTE-ID-HERE},Map your templates here
+Example: ES Product,{PASTE-ID-HERE},Global Product,{PASTE-ID-HERE},Use IDs from Step 1 output
+Example: ES Category,{PASTE-ID-HERE},Global Category,{PASTE-ID-HERE},One row per template
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,

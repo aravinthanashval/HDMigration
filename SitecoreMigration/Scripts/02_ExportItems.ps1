@@ -3,42 +3,37 @@
 # Purpose: Export items from tenant node with template & field information
 # Run in: Sitecore PowerShell Extensions (SPE) Console
 # ============================================================================
+# QUICK START:
+# 1. Edit lines 12-13 below with your paths
+# 2. Copy entire script
+# 3. Paste into SPE console
+# 4. Click Run
+# ============================================================================
+
+# 👇 EDIT THESE - Your source item path
+$SourcePath = "/Tenant/HartmannDirectES"
+$RecurseChildren = $true
+
+# ============================================================================
 
 Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
 Write-Host "║        SITECORE ITEM EXPORT SCRIPT                             ║" -ForegroundColor Cyan
 Write-Host "║         Tenant to Global Migration Process - Step 2            ║" -ForegroundColor Cyan
 Write-Host "╚════════════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-# Ask user for source path
-Write-Host "STEP 1: Specify Source Item Path" -ForegroundColor Yellow
-Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Yellow
-Write-Host "Enter the root item path you want to export/migrate.`n" -ForegroundColor White
-
-Write-Host "Examples:" -ForegroundColor Cyan
-Write-Host "  • /Tenant/Node1" -ForegroundColor Gray
-Write-Host "  • /Tenant/HartmannDirectES" -ForegroundColor Gray
-Write-Host "  • /Tenant/HartmannDirectES/Home" -ForegroundColor Gray
-Write-Host "  • /Tenant  (entire tenant)" -ForegroundColor Gray
-Write-Host ""
-
-$SourcePath = Read-Host "Enter source path"
-
 # Validate input
 if ([string]::IsNullOrWhiteSpace($SourcePath)) {
-    Write-Host "Error: Path cannot be empty" -ForegroundColor Red
+    Write-Host "ERROR: SourcePath is empty!" -ForegroundColor Red
+    Write-Host "`nEdit line 12 of this script:" -ForegroundColor Yellow
+    Write-Host '  $SourcePath = "/Tenant/YourPath"' -ForegroundColor Cyan
     exit
 }
 
-# Normalize path
 $SourcePath = $SourcePath.TrimEnd('/')
 
-# Ask if should recurse
-Write-Host "`nInclude child items recursively? (Y/N)" -ForegroundColor Yellow
-$recurseInput = Read-Host "Recurse children"
-$RecurseChildren = $recurseInput -eq "Y" -or $recurseInput -eq "y"
-
-Write-Host "`nSource Path: $SourcePath" -ForegroundColor Green
-Write-Host "Recurse Children: $RecurseChildren`n" -ForegroundColor Green
+Write-Host "Exporting items..." -ForegroundColor Green
+Write-Host "SOURCE: $SourcePath" -ForegroundColor White
+Write-Host "RECURSE: $RecurseChildren`n" -ForegroundColor White
 
 try {
     # Get all items from source path

@@ -7,10 +7,21 @@
 **Where:** `Scripts\01_DiscoverTemplates.ps1`
 
 **How:**
-1. Open **Sitecore PowerShell ISE** (or Console)
-2. Copy-paste entire `01_DiscoverTemplates.ps1`
-3. Run it
-4. Copy the **tab-separated output** at the bottom
+1. **Edit the script first:**
+   - Open `01_DiscoverTemplates.ps1` in any text editor
+   - Line 12: Change path to your source templates
+   - Line 13: (Optional) Add target template path
+   - Save the file
+
+2. **Copy-paste entire script** into Sitecore PowerShell console
+3. **Run it**
+4. **Copy the tab-separated output** at the bottom
+
+**Example edit:**
+```powershell
+$SourceTemplatePath = "/sitecore/templates/Project/HartmannDirectES"
+$TargetTemplatePath = "/sitecore/templates/Project/HartmannDirectGlobal"
+```
 
 **Result:** 
 - You'll see all templates with their GUIDs

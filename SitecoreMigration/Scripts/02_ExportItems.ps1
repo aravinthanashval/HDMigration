@@ -1,52 +1,85 @@
 # ============================================================================
 # Sitecore Item Export Script
-# Purpose: Export items from tenant node with template & field information
+# Purpose: Read migration config from Sitecore and export items
 # Run in: Sitecore PowerShell Extensions (SPE) Console
 # ============================================================================
-# QUICK START:
-# 1. Edit lines 12-13 below with your paths
-# 2. Copy entire script
-# 3. Paste into SPE console
-# 4. Click Run
+# SETUP:
+# 1. Create config item at: /sitecore/system/MigrationConfigs/[ConfigName]
+# 2. Set fields: Source Item Path, Include Children
+# 3. Edit line 12 below with your config item name
+# 4. Copy entire script, paste into SPE, run
 # ============================================================================
 
-# 👇 EDIT THESE - Your source item path
-$SourcePath = "/Tenant/HartmannDirectES"
-$RecurseChildren = $true
+# 👇 EDIT THIS - Name of your config item
+$ConfigItemName = "Hartmann Direct ES to Global"
 
 # ============================================================================
 
 Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
 Write-Host "║        SITECORE ITEM EXPORT SCRIPT                             ║" -ForegroundColor Cyan
-Write-Host "║         Tenant to Global Migration Process - Step 2            ║" -ForegroundColor Cyan
+Write-Host "║         Reading Config from Sitecore Item                      ║" -ForegroundColor Cyan
 Write-Host "╚════════════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-# Validate input
+# Function to read migration config from Sitecore
+function Get-MigrationConfigItem {
+    param([string]$ConfigName)
+
+    $configPath = "master:/sitecore/system/MigrationConfigs/$ConfigName"
+    $configItem = Get-Item -Path $configPath -ErrorAction SilentlyContinue
+
+    if (-not $configItem) {
+        Write-Host "❌ ERROR: Config item not found!" -ForegroundColor Red
+        Write-Host "   Path: $configPath" -ForegroundColor Yellow
+        Write-Host "`n   Create the config item first:" -ForegroundColor Yellow
+        Write-Host "   1. Go to /sitecore/system/MigrationConfigs/" -ForegroundColor White
+        Write-Host "   2. Create item: $ConfigName" -ForegroundColor White
+        Write-Host "   3. Fill in fields: Source Item Path, Include Children" -ForegroundColor White
+        exit
+    }
+
+    return $configItem
+}
+
+# Read config from Sitecore
+Write-Host "Reading config: $ConfigItemName" -ForegroundColor Green
+$configItem = Get-MigrationConfigItem -ConfigName $ConfigItemName
+
+$SourcePath = $configItem["Source Item Path"]
+$RecurseChildrenValue = $configItem["Include Children"]
+$RecurseChildren = $RecurseChildrenValue -eq "1" -or $RecurseChildrenValue -eq "true"
+$description = $configItem["Description"]
+
+# Validate path
 if ([string]::IsNullOrWhiteSpace($SourcePath)) {
-    Write-Host "ERROR: SourcePath is empty!" -ForegroundColor Red
-    Write-Host "`nEdit line 12 of this script:" -ForegroundColor Yellow
-    Write-Host '  $SourcePath = "/Tenant/YourPath"' -ForegroundColor Cyan
+    Write-Host "❌ ERROR: Source Item Path is empty!" -ForegroundColor Red
+    Write-Host "   Fill in 'Source Item Path' field in config item" -ForegroundColor Yellow
     exit
 }
 
+Write-Host "✓ Config loaded successfully`n" -ForegroundColor Green
+Write-Host "Description: $description" -ForegroundColor Cyan
+Write-Host "Source Items: $SourcePath" -ForegroundColor White
+Write-Host "Recurse Children: $RecurseChildren" -ForegroundColor White
+Write-Host ""
+
 $SourcePath = $SourcePath.TrimEnd('/')
 
-Write-Host "Exporting items..." -ForegroundColor Green
-Write-Host "SOURCE: $SourcePath" -ForegroundColor White
-Write-Host "RECURSE: $RecurseChildren`n" -ForegroundColor White
-
 try {
-    # Get all items from source path
+    # Get items from source path
+    Write-Host "Exporting items..." -ForegroundColor Green
+    Write-Host "Source: $SourcePath" -ForegroundColor White
+    Write-Host ""
+
     $items = @()
 
-    if ($RecurseChildren -eq $true) {
+    if ($RecurseChildren) {
         $items = Get-ChildItem -Path "master:$SourcePath" -Recurse
     } else {
         $items = Get-ChildItem -Path "master:$SourcePath"
     }
 
     if ($items.Count -eq 0) {
-        Write-Host "No items found at $SourcePath" -ForegroundColor Red
+        Write-Host "⚠ No items found at: $SourcePath" -ForegroundColor Yellow
         exit
     }
 
@@ -72,7 +105,7 @@ try {
     }
 
     # Display summary
-    Write-Host "ITEMS FOUND:" -ForegroundColor Green
+    Write-Host "ITEMS FOUND: $($exportData.Count)" -ForegroundColor Green
     Write-Host "───────────────────────────────────────────────────────────────`n"
     $exportData | Format-Table -AutoSize -Property ItemID, ItemName, TemplateName, ChildCount, VersionCount
 
@@ -107,12 +140,10 @@ try {
     Write-Host "NEXT STEPS:" -ForegroundColor Yellow
     Write-Host "1. Copy the tab-separated data above" -ForegroundColor White
     Write-Host "2. Paste into: Mappings\Item-Export.xlsx" -ForegroundColor White
-    Write-Host "3. Add TARGET PATH column for each item (where it goes in Global)" -ForegroundColor White
-    Write-Host "4. Add TARGET TEMPLATE column (using your template mapping)" -ForegroundColor White
-    Write-Host "5. Review and validate all mappings" -ForegroundColor White
-    Write-Host "6. Run: 03_ExecuteMigration.ps1" -ForegroundColor White
+    Write-Host "3. Add TARGET PATH and TARGET TEMPLATE columns" -ForegroundColor White
+    Write-Host "4. Run: 03_ExecuteMigration.ps1" -ForegroundColor White
 
 } catch {
-    Write-Host "ERROR: $_" -ForegroundColor Red
+    Write-Host "ERROR: $($_)" -ForegroundColor Red
     Write-Host $_.Exception.Message
 }

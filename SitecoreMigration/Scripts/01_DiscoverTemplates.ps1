@@ -1,43 +1,71 @@
 # ============================================================================
 # Sitecore Template Discovery Script
-# Purpose: List all templates with their IDs for mapping
+# Purpose: Read migration config from Sitecore item and discover templates
 # Run in: Sitecore PowerShell Extensions (SPE) Console
 # ============================================================================
-# QUICK START:
-# 1. Edit lines 12-15 below with your template paths
-# 2. Copy entire script
-# 3. Paste into SPE console
-# 4. Click Run
+# SETUP:
+# 1. Create config item at: /sitecore/system/MigrationConfigs/[ConfigName]
+# 2. Set fields: Source Template Path, Target Template Path
+# 3. Edit line 12 below with your config item name
+# 4. Copy entire script, paste into SPE, run
 # ============================================================================
 
-# 👇 EDIT THESE - Your template paths
-$SourceTemplatePath = "/sitecore/templates/Project/HartmannDirectES"
-$TargetTemplatePath = ""
+# 👇 EDIT THIS - Name of your config item
+$ConfigItemName = "Hartmann Direct ES to Global"
 
 # ============================================================================
 
 Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
 Write-Host "║        SITECORE TEMPLATE DISCOVERY SCRIPT                      ║" -ForegroundColor Cyan
-Write-Host "║         Tenant to Global Migration Process - Step 1            ║" -ForegroundColor Cyan
+Write-Host "║         Reading Config from Sitecore Item                      ║" -ForegroundColor Cyan
 Write-Host "╚════════════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-# Validate source path
+# Function to read migration config from Sitecore
+function Get-MigrationConfigItem {
+    param([string]$ConfigName)
+
+    $configPath = "master:/sitecore/system/MigrationConfigs/$ConfigName"
+    $configItem = Get-Item -Path $configPath -ErrorAction SilentlyContinue
+
+    if (-not $configItem) {
+        Write-Host "❌ ERROR: Config item not found!" -ForegroundColor Red
+        Write-Host "   Path: $configPath" -ForegroundColor Yellow
+        Write-Host "`n   Create the config item first:" -ForegroundColor Yellow
+        Write-Host "   1. Go to /sitecore/system/MigrationConfigs/" -ForegroundColor White
+        Write-Host "   2. Create item: $ConfigName" -ForegroundColor White
+        Write-Host "   3. Fill in fields: Source/Target Template Paths" -ForegroundColor White
+        exit
+    }
+
+    return $configItem
+}
+
+# Read config from Sitecore
+Write-Host "Reading config: $ConfigItemName" -ForegroundColor Green
+$configItem = Get-MigrationConfigItem -ConfigName $ConfigItemName
+
+$SourceTemplatePath = $configItem["Source Template Path"]
+$TargetTemplatePath = $configItem["Target Template Path"]
+$description = $configItem["Description"]
+
+# Validate paths
 if ([string]::IsNullOrWhiteSpace($SourceTemplatePath)) {
-    Write-Host "ERROR: SourceTemplatePath is empty!" -ForegroundColor Red
-    Write-Host "`nEdit line 12 of this script:" -ForegroundColor Yellow
-    Write-Host '  $SourceTemplatePath = "/sitecore/templates/Project/YourPath"' -ForegroundColor Cyan
+    Write-Host "❌ ERROR: Source Template Path is empty!" -ForegroundColor Red
+    Write-Host "   Fill in 'Source Template Path' field in config item" -ForegroundColor Yellow
     exit
 }
 
-$SourceTemplatePath = $SourceTemplatePath.TrimEnd('/')
-$TargetTemplatePath = $TargetTemplatePath.TrimEnd('/')
-
-Write-Host "Scanning templates..." -ForegroundColor Green
-Write-Host "SOURCE: $SourceTemplatePath" -ForegroundColor White
+Write-Host "✓ Config loaded successfully`n" -ForegroundColor Green
+Write-Host "Description: $description" -ForegroundColor Cyan
+Write-Host "Source Templates: $SourceTemplatePath" -ForegroundColor White
 if (-not [string]::IsNullOrWhiteSpace($TargetTemplatePath)) {
-    Write-Host "TARGET: $TargetTemplatePath" -ForegroundColor White
+    Write-Host "Target Templates: $TargetTemplatePath" -ForegroundColor White
 }
 Write-Host ""
+
+# Normalize paths
+$SourceTemplatePath = $SourceTemplatePath.TrimEnd('/')
+$TargetTemplatePath = $TargetTemplatePath.TrimEnd('/')
 
 function Get-TemplatesFromPath {
     param(
@@ -78,14 +106,11 @@ function Get-TemplatesFromPath {
 
 try {
     # Get templates from source path
+    Write-Host "Scanning templates..." -ForegroundColor Green
     $sourceTemplates = Get-TemplatesFromPath -Path $SourceTemplatePath -Label "SOURCE"
 
     if ($sourceTemplates.Count -eq 0) {
         Write-Host "❌ No templates found at: $SourceTemplatePath" -ForegroundColor Red
-        Write-Host "`nTroubleshooting:" -ForegroundColor Yellow
-        Write-Host "  1. Check the path (edit line 12)" -ForegroundColor White
-        Write-Host "  2. Try: /sitecore/templates/Project/" -ForegroundColor White
-        Write-Host "  3. Or: /sitecore/templates" -ForegroundColor White
         exit
     }
 

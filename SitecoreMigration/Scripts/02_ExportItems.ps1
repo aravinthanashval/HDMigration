@@ -30,59 +30,41 @@ Write-Host "Exporting items..." -ForegroundColor Green
 $SourcePath = $SourcePath.TrimEnd('/')
 
 try {
-    # Get items from source path
     Write-Host "Scanning items..." -ForegroundColor Cyan
-    $items = @()
 
-    if ($RecurseChildren) {
-        $items = @(Get-ChildItem -Path "master:$SourcePath" -Recurse)
+    # Build report
+    $report = if ($RecurseChildren) {
+        Get-ChildItem -Path "master:$SourcePath" -Recurse -ErrorAction SilentlyContinue
     } else {
-        $items = @(Get-ChildItem -Path "master:$SourcePath")
+        Get-ChildItem -Path "master:$SourcePath" -ErrorAction SilentlyContinue
+    } | ForEach-Object {
+        [PSCustomObject]@{
+            'Item ID' = $_.ID.ToString()
+            'Item Name' = $_.Name
+            'Item Path' = $_.ItemPath
+            'Template' = $_.TemplateName
+            'Template ID' = $_.TemplateID.ToString()
+            'Children' = @($_.Children | Measure-Object).Count
+            'Versions' = @($_.Versions | Measure-Object).Count
+            'Fields' = @($_.Fields | Measure-Object).Count
+        }
     }
 
-    if ($items.Count -eq 0) {
+    if (-not $report -or $report.Count -eq 0) {
         Write-Host "⚠ No items found at: $SourcePath" -ForegroundColor Yellow
         return
     }
 
-    Write-Host "✓ Found $($items.Count) items" -ForegroundColor Green
-
-    # Process items and build report
-    $exportData = @()
-    foreach ($item in $items) {
-        $childCount = @($item.Children | Measure-Object).Count
-        $versionCount = @($item.Versions | Measure-Object).Count
-
-        $exportData += [PSCustomObject]@{
-            'Item ID' = $item.ID.ToString()
-            'Item Name' = $item.Name
-            'Item Path' = $item.ItemPath
-            'Template' = $item.TemplateName
-            'Template ID' = $item.TemplateID.ToString()
-            'Children' = $childCount
-            'Versions' = $versionCount
-            'Fields' = $item.Fields.Count
-        }
-    }
-
-    Write-Host "`n✓ Total Items Exported: $($exportData.Count)" -ForegroundColor Green
+    Write-Host "✓ Found $($report.Count) items" -ForegroundColor Green
+    Write-Host "`n✓ Total Items Exported: $($report.Count)" -ForegroundColor Green
 
     # Show ListView
-    if ($exportData -and $exportData.Count -gt 0) {
-        $exportData | Show-ListView -Title "Items Export - Copy and Paste into Excel" -Property @(
-            @{ Name = "Item ID"; Width = 300 }
-            @{ Name = "Item Name"; Width = 150 }
-            @{ Name = "Item Path"; Width = 350 }
-            @{ Name = "Template"; Width = 180 }
-            @{ Name = "Template ID"; Width = 300 }
-            @{ Name = "Children"; Width = 70 }
-            @{ Name = "Versions"; Width = 70 }
-            @{ Name = "Fields"; Width = 70 }
-        )
+    if ($report) {
+        $report | Show-ListView -Title "Items Export - Copy and Paste into Excel"
     }
 
     Write-Host "`nINSTRUCTIONS:" -ForegroundColor Yellow
-    Write-Host "1. Select all rows in the ListView (Ctrl+A)" -ForegroundColor White
+    Write-Host "1. Select all rows (Ctrl+A)" -ForegroundColor White
     Write-Host "2. Copy (Ctrl+C)" -ForegroundColor White
     Write-Host "3. Paste into Excel" -ForegroundColor White
     Write-Host "4. Add TARGET PATH and TARGET TEMPLATE columns" -ForegroundColor White
@@ -91,5 +73,4 @@ try {
 } catch {
     Write-Host "❌ ERROR: $($_)" -ForegroundColor Red
     Write-Host "Details: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Stack: $($_.ScriptStackTrace)" -ForegroundColor Gray
 }

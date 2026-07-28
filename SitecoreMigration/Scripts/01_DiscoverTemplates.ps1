@@ -82,8 +82,19 @@ try {
         $report | Show-ListView -Title "Templates Discovery - Copy and Paste into Excel"
     }
 
-    Write-Host "`nINSTRUCTIONS:" -ForegroundColor Yellow
-    Write-Host "1. Select all rows (Ctrl+A)" -ForegroundColor White
+    # Output as CSV to console for copy-paste
+    Write-Host "`n═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "CSV Format (Copy all text below and paste into Excel):" -ForegroundColor Cyan
+    Write-Host "═══════════════════════════════════════════════════════════════`n" -ForegroundColor Cyan
+
+    $csvOutput = $report | ConvertTo-Csv -NoTypeInformation
+    foreach ($line in $csvOutput) {
+        Write-Host $line
+    }
+
+    Write-Host "`n═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "INSTRUCTIONS:" -ForegroundColor Yellow
+    Write-Host "1. Select all CSV text above (Ctrl+A)" -ForegroundColor White
     Write-Host "2. Copy (Ctrl+C)" -ForegroundColor White
     Write-Host "3. Paste into Excel" -ForegroundColor White
     Write-Host "4. Run: 02_ExportItems.ps1" -ForegroundColor White

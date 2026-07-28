@@ -12,8 +12,8 @@ Write-Host "╚═════════════════════�
 # Show dialog to get input
 $result = Read-Variable -Parameters @(
     @{ Name = "RootPath"; Title = "Root Item Path"; Value = "/sitecore/content/HartmannDirect/Global/Home"; }
-    @{ Name = "TemplateIds"; Title = "Template IDs (paste one per line from previous step)"; Value = "{GUID-1}`n{GUID-2}`n{GUID-3}"; Editor = "text"; }
-) -Title "Item Export - Filter by Templates" -Width 800 -Height 500 -OkButtonName "Export" -CancelButtonName "Cancel"
+    @{ Name = "TemplateIds"; Title = "Template IDs (paste one per line)"; Value = "{GUID-1}`n{GUID-2}`n{GUID-3}"; Lines = 20; }
+) -Title "Item Export - Filter by Templates" -Width 800 -Height 600 -OkButtonName "Export" -CancelButtonName "Cancel"
 
 if ($result -ne "ok") {
     Write-Host "Cancelled by user."

@@ -11,9 +11,9 @@ Write-Host "╚═════════════════════�
 
 # Show dialog to get input
 $result = Read-Variable -Parameters @(
-    @{ Name = "RootPath"; Title = "Root Item Path (e.g. /sitecore/content/HartmannDirect/Global/Home)"; Value = "/sitecore/content/HartmannDirect/Global/Home"; }
-    @{ Name = "TemplateIds"; Title = "Template IDs (comma-separated from previous step)"; Value = "{GUID-1},{GUID-2}"; }
-) -Title "Item Export - Filter by Templates" -Width 800 -Height 300 -OkButtonName "Export" -CancelButtonName "Cancel"
+    @{ Name = "RootPath"; Title = "Root Item Path"; Value = "/sitecore/content/HartmannDirect/Global/Home"; }
+    @{ Name = "TemplateIds"; Title = "Template IDs (paste one per line from previous step)"; Value = "{GUID-1}`n{GUID-2}`n{GUID-3}"; Editor = "text"; }
+) -Title "Item Export - Filter by Templates" -Width 800 -Height 500 -OkButtonName "Export" -CancelButtonName "Cancel"
 
 if ($result -ne "ok") {
     Write-Host "Cancelled by user."
@@ -34,8 +34,8 @@ if ([string]::IsNullOrWhiteSpace($TemplateIds)) {
 Write-Host "Exporting items..." -ForegroundColor Green
 $RootPath = $RootPath.TrimEnd('/')
 
-# Parse template IDs
-$templateIdList = @($TemplateIds -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+# Parse template IDs (split by newline or comma)
+$templateIdList = @($TemplateIds -split '[,\r\n]' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
 
 Write-Host "Searching for items with $($templateIdList.Count) template(s)..." -ForegroundColor Cyan
 Write-Host "Root Path: $RootPath`n" -ForegroundColor White

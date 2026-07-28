@@ -39,66 +39,56 @@ function Get-TemplatesFromPath {
     try {
         $templates = Get-ChildItem -Path "master:$Path" -Recurse -ErrorAction SilentlyContinue |
             Where-Object { $_.TemplateName -eq "Template" } |
-            Select-Object -Property @{
-                N="TemplateID"
-                E={$_.ID.ToString()}
-            },
-            @{
-                N="TemplateName"
-                E={$_.Name}
-            },
-            @{
-                N="FullPath"
-                E={$_.ItemPath}
-            },
-            @{
-                N="Location"
-                E={$Label}
-            },
-            @{
-                N="FieldCount"
-                E={@($_.Fields | Measure-Object).Count}
-            } | Sort-Object TemplateName
+            ForEach-Object {
+                [PSCustomObject]@{
+                    'Template Name' = $_.Name
+                    'Template ID' = $_.ID.ToString()
+                    'Location' = $Label
+                    'Full Path' = $_.ItemPath
+                    'Field Count' = @($_.Fields | Measure-Object).Count
+                }
+            } | Sort-Object 'Template Name'
 
         return $templates
     } catch {
-        Write-Host "  ⚠ Error: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "  ⚠ Error scanning $Label : $($_.Exception.Message)" -ForegroundColor Yellow
         return @()
     }
 }
 
 try {
     # Get templates from source path
-    $sourceTemplates = Get-TemplatesFromPath -Path $SourceTemplatePath -Label "SOURCE"
+    Write-Host "Scanning source templates..." -ForegroundColor Cyan
+    $sourceTemplates = @(Get-TemplatesFromPath -Path $SourceTemplatePath -Label "SOURCE")
 
     if ($sourceTemplates.Count -eq 0) {
         Write-Host "❌ No templates found at: $SourceTemplatePath" -ForegroundColor Red
+        Write-Host "`nTroubleshooting:" -ForegroundColor Yellow
+        Write-Host "  • Check the path spelling" -ForegroundColor White
+        Write-Host "  • Try: /sitecore/templates/Project/" -ForegroundColor White
         return
     }
+
+    Write-Host "✓ Found $($sourceTemplates.Count) source templates" -ForegroundColor Green
 
     $allTemplates = $sourceTemplates
 
     # Get templates from target path if provided
     if (-not [string]::IsNullOrWhiteSpace($TargetTemplatePath)) {
-        $globalTemplates = Get-TemplatesFromPath -Path $TargetTemplatePath -Label "TARGET"
+        Write-Host "Scanning target templates..." -ForegroundColor Cyan
+        $globalTemplates = @(Get-TemplatesFromPath -Path $TargetTemplatePath -Label "TARGET")
 
         if ($globalTemplates.Count -gt 0) {
+            Write-Host "✓ Found $($globalTemplates.Count) target templates" -ForegroundColor Green
             $allTemplates = @($sourceTemplates) + @($globalTemplates)
         }
     }
 
-    # Build report for ListView
-    $report = $allTemplates | Select-Object @(
-        @{ Name = "Template Name"; Expression = { $_.TemplateName } }
-        @{ Name = "Template ID"; Expression = { $_.TemplateID } }
-        @{ Name = "Location"; Expression = { $_.Location } }
-        @{ Name = "Full Path"; Expression = { $_.FullPath } }
-        @{ Name = "Field Count"; Expression = { $_.FieldCount } }
-    )
+    Write-Host "`n✓ Total Templates Found: $($allTemplates.Count)" -ForegroundColor Green
 
     # Show ListView
-    if ($report) {
-        $report | Show-ListView -Title "Templates Discovery - Copy and Paste into Excel" -Property @(
+    if ($allTemplates -and $allTemplates.Count -gt 0) {
+        $allTemplates | Show-ListView -Title "Templates Discovery - Copy and Paste into Excel" -Property @(
             @{ Name = "Template Name"; Width = 200 }
             @{ Name = "Template ID"; Width = 300 }
             @{ Name = "Location"; Width = 100 }
@@ -107,7 +97,6 @@ try {
         )
     }
 
-    Write-Host "`n✓ Total Templates Found: $($report.Count)" -ForegroundColor Green
     Write-Host "`nINSTRUCTIONS:" -ForegroundColor Yellow
     Write-Host "1. Select all rows in the ListView (Ctrl+A)" -ForegroundColor White
     Write-Host "2. Copy (Ctrl+C)" -ForegroundColor White
@@ -115,5 +104,7 @@ try {
     Write-Host "4. Run: 02_ExportItems.ps1" -ForegroundColor White
 
 } catch {
-    Write-Host "ERROR: $($_)" -ForegroundColor Red
+    Write-Host "❌ ERROR: $($_)" -ForegroundColor Red
+    Write-Host "Details: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Stack: $($_.ScriptStackTrace)" -ForegroundColor Gray
 }

@@ -31,12 +31,13 @@ $SourcePath = $SourcePath.TrimEnd('/')
 
 try {
     # Get items from source path
+    Write-Host "Scanning items..." -ForegroundColor Cyan
     $items = @()
 
     if ($RecurseChildren) {
-        $items = Get-ChildItem -Path "master:$SourcePath" -Recurse
+        $items = @(Get-ChildItem -Path "master:$SourcePath" -Recurse)
     } else {
-        $items = Get-ChildItem -Path "master:$SourcePath"
+        $items = @(Get-ChildItem -Path "master:$SourcePath")
     }
 
     if ($items.Count -eq 0) {
@@ -44,36 +45,31 @@ try {
         return
     }
 
-    # Process items and extract data
+    Write-Host "✓ Found $($items.Count) items" -ForegroundColor Green
+
+    # Process items and build report
     $exportData = @()
     foreach ($item in $items) {
+        $childCount = @($item.Children | Measure-Object).Count
+        $versionCount = @($item.Versions | Measure-Object).Count
+
         $exportData += [PSCustomObject]@{
-            ItemID      = $item.ID.ToString()
-            ItemName    = $item.Name
-            ItemPath    = $item.ItemPath
-            Template    = $item.TemplateName
-            TemplateID  = $item.TemplateID.ToString()
-            Children    = @($item | Get-ChildItem | Measure-Object).Count
-            Versions    = @($item.Versions | Measure-Object).Count
-            Fields      = $item.Fields.Count
+            'Item ID' = $item.ID.ToString()
+            'Item Name' = $item.Name
+            'Item Path' = $item.ItemPath
+            'Template' = $item.TemplateName
+            'Template ID' = $item.TemplateID.ToString()
+            'Children' = $childCount
+            'Versions' = $versionCount
+            'Fields' = $item.Fields.Count
         }
     }
 
-    # Build report for ListView
-    $report = $exportData | Select-Object @(
-        @{ Name = "Item ID"; Expression = { $_.ItemID } }
-        @{ Name = "Item Name"; Expression = { $_.ItemName } }
-        @{ Name = "Item Path"; Expression = { $_.ItemPath } }
-        @{ Name = "Template"; Expression = { $_.Template } }
-        @{ Name = "Template ID"; Expression = { $_.TemplateID } }
-        @{ Name = "Children"; Expression = { $_.Children } }
-        @{ Name = "Versions"; Expression = { $_.Versions } }
-        @{ Name = "Fields"; Expression = { $_.Fields } }
-    )
+    Write-Host "`n✓ Total Items Exported: $($exportData.Count)" -ForegroundColor Green
 
     # Show ListView
-    if ($report) {
-        $report | Show-ListView -Title "Items Export - Copy and Paste into Excel" -Property @(
+    if ($exportData -and $exportData.Count -gt 0) {
+        $exportData | Show-ListView -Title "Items Export - Copy and Paste into Excel" -Property @(
             @{ Name = "Item ID"; Width = 300 }
             @{ Name = "Item Name"; Width = 150 }
             @{ Name = "Item Path"; Width = 350 }
@@ -85,7 +81,6 @@ try {
         )
     }
 
-    Write-Host "`n✓ Total Items Exported: $($report.Count)" -ForegroundColor Green
     Write-Host "`nINSTRUCTIONS:" -ForegroundColor Yellow
     Write-Host "1. Select all rows in the ListView (Ctrl+A)" -ForegroundColor White
     Write-Host "2. Copy (Ctrl+C)" -ForegroundColor White
@@ -94,6 +89,7 @@ try {
     Write-Host "5. Run: 03_ExecuteMigration.ps1" -ForegroundColor White
 
 } catch {
-    Write-Host "ERROR: $($_)" -ForegroundColor Red
-    Write-Host $_.Exception.Message
+    Write-Host "❌ ERROR: $($_)" -ForegroundColor Red
+    Write-Host "Details: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Stack: $($_.ScriptStackTrace)" -ForegroundColor Gray
 }

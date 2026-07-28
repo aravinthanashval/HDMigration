@@ -26,15 +26,9 @@ if ([string]::IsNullOrWhiteSpace($SourceTemplatePath)) {
     return
 }
 
-Write-Host "Reading config from Sitecore..." -ForegroundColor Green
+Write-Host "Discovering templates..." -ForegroundColor Green
 $SourceTemplatePath = $SourceTemplatePath.TrimEnd('/')
 $TargetTemplatePath = $TargetTemplatePath.TrimEnd('/')
-
-Write-Host "✓ Source Templates: $SourceTemplatePath" -ForegroundColor White
-if (-not [string]::IsNullOrWhiteSpace($TargetTemplatePath)) {
-    Write-Host "✓ Target Templates: $TargetTemplatePath" -ForegroundColor White
-}
-Write-Host ""
 
 function Get-TemplatesFromPath {
     param(
@@ -75,19 +69,12 @@ function Get-TemplatesFromPath {
 
 try {
     # Get templates from source path
-    Write-Host "Scanning templates..." -ForegroundColor Green
     $sourceTemplates = Get-TemplatesFromPath -Path $SourceTemplatePath -Label "SOURCE"
 
     if ($sourceTemplates.Count -eq 0) {
         Write-Host "❌ No templates found at: $SourceTemplatePath" -ForegroundColor Red
-        Write-Host "`nTroubleshooting:" -ForegroundColor Yellow
-        Write-Host "  • Check the path spelling" -ForegroundColor White
-        Write-Host "  • Try: /sitecore/templates/Project/" -ForegroundColor White
-        Write-Host "  • Or: /sitecore/templates" -ForegroundColor White
         return
     }
-
-    Write-Host "✓ Found $($sourceTemplates.Count) source templates`n" -ForegroundColor Green
 
     $allTemplates = $sourceTemplates
 
@@ -96,35 +83,35 @@ try {
         $globalTemplates = Get-TemplatesFromPath -Path $TargetTemplatePath -Label "TARGET"
 
         if ($globalTemplates.Count -gt 0) {
-            Write-Host "✓ Found $($globalTemplates.Count) target templates`n" -ForegroundColor Green
             $allTemplates = @($sourceTemplates) + @($globalTemplates)
         }
     }
 
-    # Display results
-    Write-Host "TEMPLATES FOUND:" -ForegroundColor Green
-    Write-Host "───────────────────────────────────────────────────────────────`n"
-    $allTemplates | Format-Table -AutoSize -Property TemplateID, TemplateName, Location, FullPath, FieldCount
+    # Build report for ListView
+    $report = $allTemplates | Select-Object @(
+        @{ Name = "Template Name"; Expression = { $_.TemplateName } }
+        @{ Name = "Template ID"; Expression = { $_.TemplateID } }
+        @{ Name = "Location"; Expression = { $_.Location } }
+        @{ Name = "Full Path"; Expression = { $_.FullPath } }
+        @{ Name = "Field Count"; Expression = { $_.FieldCount } }
+    )
 
-    # Export to clipboard format
-    Write-Host "`n───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
-    Write-Host "COPY-PASTE TO EXCEL (Tab-separated):" -ForegroundColor Cyan
-    Write-Host "───────────────────────────────────────────────────────────────`n"
-
-    Write-Host "TemplateID`tTemplateName`tLocation`tFullPath`tFieldCount"
-    $allTemplates | ForEach-Object {
-        "{0}`t{1}`t{2}`t{3}`t{4}" -f $_.TemplateID, $_.TemplateName, $_.Location, $_.FullPath, $_.FieldCount
+    # Show ListView
+    if ($report) {
+        $report | Show-ListView -Title "Templates Discovery - Copy and Paste into Excel" -Property @(
+            @{ Name = "Template Name"; Width = 200 }
+            @{ Name = "Template ID"; Width = 300 }
+            @{ Name = "Location"; Width = 100 }
+            @{ Name = "Full Path"; Width = 350 }
+            @{ Name = "Field Count"; Width = 80 }
+        )
     }
 
-    # Summary
-    Write-Host "`n───────────────────────────────────────────────────────────────" -ForegroundColor Green
-    Write-Host "✓ Total Templates: $($allTemplates.Count)" -ForegroundColor Green
-    Write-Host "───────────────────────────────────────────────────────────────`n" -ForegroundColor Green
-
-    Write-Host "NEXT STEPS:" -ForegroundColor Yellow
-    Write-Host "1. Copy tab-separated output above" -ForegroundColor White
-    Write-Host "2. Paste into: Mappings\Template-Mapping.xlsx" -ForegroundColor White
-    Write-Host "3. Create your SOURCE → TARGET template mapping" -ForegroundColor White
+    Write-Host "`n✓ Total Templates Found: $($report.Count)" -ForegroundColor Green
+    Write-Host "`nINSTRUCTIONS:" -ForegroundColor Yellow
+    Write-Host "1. Select all rows in the ListView (Ctrl+A)" -ForegroundColor White
+    Write-Host "2. Copy (Ctrl+C)" -ForegroundColor White
+    Write-Host "3. Paste into Excel" -ForegroundColor White
     Write-Host "4. Run: 02_ExportItems.ps1" -ForegroundColor White
 
 } catch {

@@ -82,22 +82,14 @@ try {
         $report | Show-ListView -Title "Templates Discovery - Copy and Paste into Excel"
     }
 
-    # Output as CSV to console for copy-paste
+    # Output template IDs to console for copy-paste
     Write-Host "`n═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "CSV Format (Copy all text below and paste into Excel):" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════════`n" -ForegroundColor Cyan
+    Write-Host "Template IDs (Copy and use in next steps):" -ForegroundColor Cyan
+    Write-Host "═══════════════════════════════════════════════════════════════`n" -ForegroundColor Yellow
 
-    $csvOutput = $report | ConvertTo-Csv -NoTypeInformation
-    foreach ($line in $csvOutput) {
-        Write-Host $line
-    }
+    $report | ForEach-Object { Write-Host $_.('Template ID') }
 
     Write-Host "`n═══════════════════════════════════════════════════════════════" -ForegroundColor Green
-    Write-Host "INSTRUCTIONS:" -ForegroundColor Yellow
-    Write-Host "1. Select all CSV text above (Ctrl+A)" -ForegroundColor White
-    Write-Host "2. Copy (Ctrl+C)" -ForegroundColor White
-    Write-Host "3. Paste into Excel" -ForegroundColor White
-    Write-Host "4. Run: 02_ExportItems.ps1" -ForegroundColor White
 
 } catch {
     Write-Host "❌ ERROR: $($_)" -ForegroundColor Red

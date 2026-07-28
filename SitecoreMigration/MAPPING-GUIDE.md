@@ -1,107 +1,115 @@
 # Mapping Guide: Region to Global Migration
 
-Create mapping in a single Excel sheet with all data together.
+Create mapping in a single Excel sheet with formulas that auto-fetch IDs.
 
 ---
 
 ## 📊 Mapping Excel Structure
 
-### **Region Section (Source Data)**
-| Column | Source | Description | Example |
-|--------|--------|-------------|---------|
-| Region Page ID | Region export | Item ID from region | `{877ED844-30E5-4D7B-B7BF-D9222BB9F20F}` |
-| Region Page Name | Region export | Item name from region | `Products` |
-| Region Page Path | Region export | Item path from region | `/sitecore/content/HartmannDirect/ES/Home/Products` |
-| Region Template | Region export | Template name | `HD Product Main Listing Page` |
-| Region Template ID | Region export | Template ID | `{7729CF78-C90F-4BDC-AB7D-2FBC9CCC4E96}` |
+### **Region Section (Columns A-E)**
+| A | B | C | D | E |
+|---|---|---|---|---|
+| **Region Page ID** | **Region Page Name** | **Region Page Path** | **Region Template** | **Region Template ID** |
+| {877...} | Products | /sitecore/... | HD Product... | {7729...} |
 
-### **Global Section (Target Data)**
-| Column | Source | Description | Example |
-|--------|--------|-------------|---------|
-| Global Page ID | ES_Global.xlsx | Item ID from global | `{54389452-891C-48CA-8202-140B254D25D4}` |
-| Global Page Name | ES_Global.xlsx | Item name from global | `Products` |
-| Global Page Path | ES_Global.xlsx | Item path from global | `/sitecore/content/HartmannDirect/Global/Home/Products` |
-| Global Template | ES_Global.xlsx | Template name | `HD Product Main Listing Page` |
-| Global Template ID | ES_Global.xlsx | Template ID | `{7729CF78-C90F-4BDC-AB7D-2FBC9CCC4E96}` |
+### **Global Section (Columns F-J)**
+| F | G | H | I | J |
+|---|---|---|---|---|
+| **Global Page ID** | **Global Page Name** | **Global Page Path** | **Global Template** | **Global Template ID** |
+| {543...} | Products | /sitecore/... | HD Product... | {7729...} |
 
-### **Mapping Section (Decision & Output)**
-| Column | Type | Description | Example |
-|--------|------|-------------|---------|
-| Move to Local | Manual | "L" = local, blank = global | `L` or `` |
-| New Path | Formula | Final destination path | `/sitecore/content/HartmannDirect/Local/Products` |
-| Old Path ID | Reference | = Region Page ID column | `{877ED844-30E5-4D7B-B7BF-D9222BB9F20F}` |
-| New Path ID | Reference | = Global Page ID column | `{54389452-891C-48CA-8202-140B254D25D4}` |
+### **Mapping Section (Columns K-O)**
+| K | L | M | N | O |
+|---|---|---|---|---|
+| **Move to Local** | **New Path** | **Old Path ID** | **New Path ID** |
 
 ---
 
 ## 🔧 How to Build This
 
 ### **Step 1: Create Base Excel Sheet**
-Create columns in order:
-```
-Region Page ID | Region Page Name | Region Page Path | Region Template | Region Template ID |
-Global Page ID | Global Page Name | Global Page Path | Global Template | Global Template ID |
-Move to Local | New Path | Old Path ID | New Path ID
-```
+Open Excel and create columns A through O with headers shown above.
 
 ### **Step 2: Paste Region Data**
 1. Run `02_ExportItems.ps1` for Region
    - Root: `/sitecore/content/HartmannDirect/ES/Home`
-   - Get ES_Region.xlsx
+   - Result: ES_Region.xlsx
 
-2. Copy columns from ES_Region.xlsx:
-   - Item ID → Region Page ID
-   - Item Name → Region Page Name
-   - Item Path → Region Page Path
-   - Template → Region Template
-   - Template ID → Region Template ID
+2. Copy from ES_Region.xlsx:
+   - Item ID → Column A (Region Page ID)
+   - Item Name → Column B (Region Page Name)
+   - Item Path → Column C (Region Page Path)
+   - Template → Column D (Region Template)
+   - Template ID → Column E (Region Template ID)
 
 ### **Step 3: Paste Global Data**
-1. Use ES_Global.xlsx (already have)
+Copy from ES_Global.xlsx:
+- Item ID → Column F (Global Page ID)
+- Item Name → Column G (Global Page Name)
+- Item Path → Column H (Global Page Path)
+- Template → Column I (Global Template)
+- Template ID → Column J (Global Template ID)
 
-2. Copy columns from ES_Global.xlsx:
-   - Item ID → Global Page ID
-   - Item Name → Global Page Name
-   - Item Path → Global Page Path
-   - Template → Global Template
-   - Template ID → Global Template ID
+**Match rows by name** - Same items should be in same row.
 
-3. **Match by name/path** - Global items should be in same row as Region items with matching names
+### **Step 4: Add Formulas**
 
-### **Step 4: Add Mapping Columns**
-Add three new columns on the right:
-- Move to Local
-- New Path
-- Old Path ID
-- New Path ID
+#### **Column K: Move to Local** (Manual - No Formula)
+Leave empty or enter "L":
+- **"L"** = Item will be moved to local folder
+- **Blank** = Item stays in global
 
-### **Step 5: Fill Formulas**
-
-**Move to Local (Column M)** - Manual decision
-```
-L = item moves to local folder
-blank = item stays in global
-```
-
-**New Path (Column N)** - Formula
+#### **Column L: New Path** (Formula)
+In cell L2, enter this formula and copy down to all rows:
 ```excel
-=IF(M2="L",
-    SUBSTITUTE(D2, "/ES/", "/Local/"),
-    D2)
+=IF(K2="L", SUBSTITUTE(H2, "/Global/", "/Local/"), H2)
 ```
-If Move to Local="L", replace /ES/ with /Local/, else keep region path
 
-**Old Path ID (Column O)** - Reference
+**How it works:**
+- If K2 = "L" → Replace "/Global/" with "/Local/" in path H2
+- Otherwise → Keep path H2 as-is
+- This calculates the final destination path
+
+**Example:**
+- K2 = "L", H2 = `/sitecore/.../Global/.../Products`
+- L2 = `/sitecore/.../Local/.../Products`
+
+#### **Column M: Old Path ID** (Formula - Auto Fetch)
+In cell M2, enter this formula and copy down:
 ```excel
 =A2
 ```
-Just point to Region Page ID column
 
-**New Path ID (Column P)** - Reference
+**How it works:**
+- Simply references the Region Page ID from column A
+- This is the "from" item ID for migration
+- For each row, Excel auto-adjusts: =A2, =A3, =A4, etc.
+
+#### **Column N: New Path ID** (Formula - Auto Fetch)
+In cell N2, enter this formula and copy down:
 ```excel
 =F2
 ```
-Just point to Global Page ID column
+
+**How it works:**
+- Simply references the Global Page ID from column F
+- This is the "to" item ID for migration
+- For each row, Excel auto-adjusts: =F2, =F3, =F4, etc.
+
+---
+
+## 📋 Copy Down Formulas
+
+After entering formulas in row 2:
+
+1. **Select cell L2** (New Path formula)
+2. **Copy** (Ctrl+C)
+3. **Select range L3:L[LastRow]**
+4. **Paste** (Ctrl+V)
+
+Repeat for columns M and N.
+
+**Excel will auto-adjust row numbers:** L2→L3→L4, A2→A3→A4, F2→F3→F4, etc.
 
 ---
 
@@ -109,55 +117,62 @@ Just point to Global Page ID column
 
 ```
 Row 2:
-Region Page ID:     {877ED844-30E5-4D7B-B7BF-D9222BB9F20F}
-Region Page Name:   Products
-Region Page Path:   /sitecore/content/HartmannDirect/ES/Home/Products
-Region Template:    HD Product Main Listing Page
-Region Template ID: {7729CF78-C90F-4BDC-AB7D-2FBC9CCC4E96}
+A2: {877ED844-30E5-4D7B-B7BF-D9222BB9F20F}  ← Region Page ID
+B2: Products
+C2: /sitecore/content/HartmannDirect/ES/Home/Products
+D2: HD Product Main Listing Page
+E2: {7729CF78-C90F-4BDC-AB7D-2FBC9CCC4E96}
 
-Global Page ID:     {54389452-891C-48CA-8202-140B254D25D4}
-Global Page Name:   Products
-Global Page Path:   /sitecore/content/HartmannDirect/Global/Home/Products
-Global Template:    HD Product Main Listing Page
-Global Template ID: {7729CF78-C90F-4BDC-AB7D-2FBC9CCC4E96}
+F2: {54389452-891C-48CA-8202-140B254D25D4}  ← Global Page ID
+G2: Products
+H2: /sitecore/content/HartmannDirect/Global/Home/Products
+I2: HD Product Main Listing Page
+J2: {7729CF78-C90F-4BDC-AB7D-2FBC9CCC4E96}
 
-Move to Local: [blank - stays global]
-New Path:      /sitecore/content/HartmannDirect/Global/Home/Products
-Old Path ID:   {877ED844-30E5-4D7B-B7BF-D9222BB9F20F}
-New Path ID:   {54389452-891C-48CA-8202-140B254D25D4}
+K2: [blank - stays global]
+L2: =IF(K2="L", SUBSTITUTE(H2, "/Global/", "/Local/"), H2)
+    Result: /sitecore/content/HartmannDirect/Global/Home/Products
+M2: =A2
+    Result: {877ED844-30E5-4D7B-B7BF-D9222BB9F20F}
+N2: =F2
+    Result: {54389452-891C-48CA-8202-140B254D25D4}
 ```
 
 ---
 
-## 🎯 Key Rules
+## 🎯 Key Formulas
 
-✅ **Old Path ID** = Always = Region Page ID (column A)
-✅ **New Path ID** = Always = Global Page ID (column F)
-✅ **Move to Local** = Manual decision per row
-✅ **New Path** = Depends on Move to Local decision
+| Column | Formula | Fetches From |
+|--------|---------|--------------|
+| **L** (New Path) | `=IF(K2="L", SUBSTITUTE(H2, "/Global/", "/Local/"), H2)` | Global Path (H) + Move to Local (K) |
+| **M** (Old Path ID) | `=A2` | Region Page ID (A) |
+| **N** (New Path ID) | `=F2` | Global Page ID (F) |
 
 ---
 
 ## ✨ Why This Works
 
-- **All data in one place** - Easy to review
-- **IDs directly from columns** - No lookup errors
-- **Simple formulas** - Just references
-- **Clear mapping** - Region → Global → Local
+✅ **All IDs auto-fetched from columns** - No manual copy-paste errors
+✅ **Formulas handle local/global logic** - Automatic path calculation
+✅ **Simple references** - =A2 and =F2 just point to existing columns
+✅ **Easy to verify** - Can see source IDs and results side-by-side
 
 ---
 
-## 🚀 Step-by-Step Process
+## 🚀 Complete Process
 
-1. Create blank Excel with column headers
-2. Export Region Pages → Copy to Region columns
-3. Copy Global data from ES_Global.xlsx → Global columns
-4. Match rows by item name
-5. Add Move to Local decision ("L" or blank)
-6. Add formulas for New Path, Old Path ID, New Path ID
-7. Save as CSV
-8. Use in `03_ExecuteMigration.ps1`
+1. Create Excel with headers A-N
+2. Copy Region data (columns A-E)
+3. Copy Global data (columns F-J)
+4. Match rows by name
+5. **Add formula in L2:** `=IF(K2="L", SUBSTITUTE(H2, "/Global/", "/Local/"), H2)`
+6. **Add formula in M2:** `=A2`
+7. **Add formula in N2:** `=F2`
+8. Copy all 3 formulas down to all data rows
+9. Fill Move to Local (K) with "L" or blank
+10. Save as CSV
+11. Use in `03_ExecuteMigration.ps1`
 
 ---
 
-**Done!** One mapping file with everything you need! 📊
+**Done!** Formulas will auto-fetch all the IDs you need! ✅

@@ -13,8 +13,9 @@ Write-Host "╚═════════════════════�
 $result = Read-Variable -Parameters @(
     @{ Name = "RootPath"; Title = "Root Item Path"; Value = "/sitecore/content/HartmannDirect/Global/Home"; }
     @{ Name = "TemplateIds"; Title = "Template IDs to INCLUDE (paste one per line)"; Value = "{GUID-1}`n{GUID-2}`n{GUID-3}"; Lines = 15; }
-    @{ Name = "ExcludeTemplateIds"; Title = "Template IDs to EXCLUDE + children (optional, paste one per line)"; Value = "{8C58B2C2-DF3E-4802-9AE8-9A425A0EC544}"; Lines = 5; }
-) -Title "Item Export - Filter by Templates" -Width 800 -Height 700 -OkButtonName "Export" -CancelButtonName "Cancel"
+    @{ Name = "ExcludeTemplateIds"; Title = "Template IDs to EXCLUDE + children (optional)"; Value = "{8C58B2C2-DF3E-4802-9AE8-9A425A0EC544}"; Lines = 3; }
+    @{ Name = "ExcludeItemNames"; Title = "Item Names to EXCLUDE (use * as wildcard, one per line, e.g. *Settings, __*, etc)"; Value = ""; Lines = 3; }
+) -Title "Item Export - Filter by Templates" -Width 900 -Height 800 -OkButtonName "Export" -CancelButtonName "Cancel"
 
 if ($result -ne "ok") {
     Write-Host "Cancelled by user."
@@ -41,9 +42,15 @@ $templateIdList = @($TemplateIds -split '[,\r\n]' | ForEach-Object { $_.Trim() }
 # Parse template IDs to exclude (split by newline or comma)
 $excludeTemplateIdList = @($ExcludeTemplateIds -split '[,\r\n]' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
 
+# Parse item names to exclude (split by newline)
+$excludeItemNamePatterns = @($ExcludeItemNames -split '[,\r\n]' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+
 Write-Host "Searching for items with $($templateIdList.Count) template(s)..." -ForegroundColor Cyan
 if ($excludeTemplateIdList.Count -gt 0) {
     Write-Host "Excluding items with $($excludeTemplateIdList.Count) template(s) and their children..." -ForegroundColor Yellow
+}
+if ($excludeItemNamePatterns.Count -gt 0) {
+    Write-Host "Excluding items matching name pattern(s): $($excludeItemNamePatterns -join ', ')..." -ForegroundColor Yellow
 }
 Write-Host "Root Path: $RootPath`n" -ForegroundColor White
 
@@ -74,11 +81,23 @@ try {
         }
     }
 
-    # Filter items: include matching templates AND exclude excluded items/children
+    # Filter items: include matching templates AND exclude excluded items/children AND exclude by name
     $report = $allItems |
         Where-Object {
-            ($templateIdList -contains $_.TemplateID.ToString()) -and
-            ($excludeItemIds -notcontains $_.ID.ToString())
+            $item = $_
+            $includeByTemplate = $templateIdList -contains $item.TemplateID.ToString()
+            $notExcludedById = $excludeItemIds -notcontains $item.ID.ToString()
+
+            # Check if item name matches any exclusion pattern
+            $excludeByName = $false
+            foreach ($pattern in $excludeItemNamePatterns) {
+                if ($item.Name -like $pattern) {
+                    $excludeByName = $true
+                    break
+                }
+            }
+
+            $includeByTemplate -and $notExcludedById -and -not $excludeByName
         } |
         ForEach-Object {
             [PSCustomObject]@{

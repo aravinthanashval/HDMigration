@@ -1,73 +1,41 @@
 # ============================================================================
 # Sitecore Item Export Script
-# Purpose: Read migration config from Sitecore and export items
+# Purpose: Export items from tenant node with template & field information
 # Run in: Sitecore PowerShell Extensions (SPE) Console
-# ============================================================================
-# SETUP:
-# 1. Create config item at: /sitecore/system/MigrationConfigs/[ConfigName]
-# 2. Set fields: Source Item Path, Include Children
-# 3. Edit line 12 below with your config item name
-# 4. Copy entire script, paste into SPE, run
-# ============================================================================
-
-# 👇 EDIT THIS - Name of your config item
-$ConfigItemName = "Hartmann Direct ES to Global"
-
 # ============================================================================
 
 Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
 Write-Host "║        SITECORE ITEM EXPORT SCRIPT                             ║" -ForegroundColor Cyan
-Write-Host "║         Reading Config from Sitecore Item                      ║" -ForegroundColor Cyan
+Write-Host "║         Tenant to Global Migration Process - Step 2            ║" -ForegroundColor Cyan
 Write-Host "╚════════════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-# Function to read migration config from Sitecore
-function Get-MigrationConfigItem {
-    param([string]$ConfigName)
+# Show dialog to get input
+$result = Read-Variable -Parameters @(
+    @{ Name = "SourcePath"; Title = "Source Item Path"; Value = "/Tenant/HartmannDirectES"; }
+    @{ Name = "RecurseChildren"; Title = "Include Child Items"; Value = $true; Editor = "bool"; }
+) -Title "Item Export - Enter Paths" -Width 600 -Height 250 -OkButtonName "Export" -CancelButtonName "Cancel"
 
-    $configPath = "master:/sitecore/system/MigrationConfigs/$ConfigName"
-    $configItem = Get-Item -Path $configPath -ErrorAction SilentlyContinue
-
-    if (-not $configItem) {
-        Write-Host "❌ ERROR: Config item not found!" -ForegroundColor Red
-        Write-Host "   Path: $configPath" -ForegroundColor Yellow
-        Write-Host "`n   Create the config item first:" -ForegroundColor Yellow
-        Write-Host "   1. Go to /sitecore/system/MigrationConfigs/" -ForegroundColor White
-        Write-Host "   2. Create item: $ConfigName" -ForegroundColor White
-        Write-Host "   3. Fill in fields: Source Item Path, Include Children" -ForegroundColor White
-        exit
-    }
-
-    return $configItem
+if ($result -ne "ok") {
+    Write-Host "Cancelled by user."
+    return
 }
 
-# Read config from Sitecore
-Write-Host "Reading config: $ConfigItemName" -ForegroundColor Green
-$configItem = Get-MigrationConfigItem -ConfigName $ConfigItemName
-
-$SourcePath = $configItem["Source Item Path"]
-$RecurseChildrenValue = $configItem["Include Children"]
-$RecurseChildren = $RecurseChildrenValue -eq "1" -or $RecurseChildrenValue -eq "true"
-$description = $configItem["Description"]
-
-# Validate path
+# Validate source path
 if ([string]::IsNullOrWhiteSpace($SourcePath)) {
-    Write-Host "❌ ERROR: Source Item Path is empty!" -ForegroundColor Red
-    Write-Host "   Fill in 'Source Item Path' field in config item" -ForegroundColor Yellow
-    exit
+    Write-Host "❌ ERROR: Source Item Path cannot be empty!" -ForegroundColor Red
+    return
 }
 
-Write-Host "✓ Config loaded successfully`n" -ForegroundColor Green
-Write-Host "Description: $description" -ForegroundColor Cyan
-Write-Host "Source Items: $SourcePath" -ForegroundColor White
-Write-Host "Recurse Children: $RecurseChildren" -ForegroundColor White
-Write-Host ""
-
+Write-Host "Preparing item export..." -ForegroundColor Green
 $SourcePath = $SourcePath.TrimEnd('/')
+
+Write-Host "✓ Source Path: $SourcePath" -ForegroundColor White
+Write-Host "✓ Recurse Children: $RecurseChildren" -ForegroundColor White
+Write-Host ""
 
 try {
     # Get items from source path
     Write-Host "Exporting items..." -ForegroundColor Green
-    Write-Host "Source: $SourcePath" -ForegroundColor White
     Write-Host ""
 
     $items = @()
@@ -80,7 +48,7 @@ try {
 
     if ($items.Count -eq 0) {
         Write-Host "⚠ No items found at: $SourcePath" -ForegroundColor Yellow
-        exit
+        return
     }
 
     # Process items and extract data

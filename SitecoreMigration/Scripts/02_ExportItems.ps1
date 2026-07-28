@@ -12,8 +12,9 @@ Write-Host "╚═════════════════════�
 # Show dialog to get input
 $result = Read-Variable -Parameters @(
     @{ Name = "RootPath"; Title = "Root Item Path"; Value = "/sitecore/content/HartmannDirect/Global/Home"; }
-    @{ Name = "TemplateIds"; Title = "Template IDs (paste one per line)"; Value = "{GUID-1}`n{GUID-2}`n{GUID-3}"; Lines = 20; }
-) -Title "Item Export - Filter by Templates" -Width 800 -Height 600 -OkButtonName "Export" -CancelButtonName "Cancel"
+    @{ Name = "TemplateIds"; Title = "Template IDs to INCLUDE (paste one per line)"; Value = "{GUID-1}`n{GUID-2}`n{GUID-3}"; Lines = 15; }
+    @{ Name = "ExcludeTemplateIds"; Title = "Template IDs to EXCLUDE + children (optional, paste one per line)"; Value = ""; Lines = 5; }
+) -Title "Item Export - Filter by Templates" -Width 800 -Height 700 -OkButtonName "Export" -CancelButtonName "Cancel"
 
 if ($result -ne "ok") {
     Write-Host "Cancelled by user."
@@ -34,10 +35,16 @@ if ([string]::IsNullOrWhiteSpace($TemplateIds)) {
 Write-Host "Exporting items..." -ForegroundColor Green
 $RootPath = $RootPath.TrimEnd('/')
 
-# Parse template IDs (split by newline or comma)
+# Parse template IDs to include (split by newline or comma)
 $templateIdList = @($TemplateIds -split '[,\r\n]' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
 
+# Parse template IDs to exclude (split by newline or comma)
+$excludeTemplateIdList = @($ExcludeTemplateIds -split '[,\r\n]' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+
 Write-Host "Searching for items with $($templateIdList.Count) template(s)..." -ForegroundColor Cyan
+if ($excludeTemplateIdList.Count -gt 0) {
+    Write-Host "Excluding items with $($excludeTemplateIdList.Count) template(s) and their children..." -ForegroundColor Yellow
+}
 Write-Host "Root Path: $RootPath`n" -ForegroundColor White
 
 try {
@@ -51,11 +58,28 @@ try {
 
     Write-Host "✓ Root item found: $($rootItem.Name)`n" -ForegroundColor Green
 
-    # Get all items under root and filter by template IDs
+    # Get all items under root
     Write-Host "Scanning and filtering items..." -ForegroundColor Cyan
+    $allItems = Get-ChildItem -Path "master:$RootPath" -Recurse -ErrorAction SilentlyContinue
 
-    $report = Get-ChildItem -Path "master:$RootPath" -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { $templateIdList -contains $_.TemplateID.ToString() } |
+    # Identify items to exclude (those with excluded template IDs and their descendants)
+    $excludeItemIds = @()
+    if ($excludeTemplateIdList.Count -gt 0) {
+        $itemsToExclude = $allItems | Where-Object { $excludeTemplateIdList -contains $_.TemplateID.ToString() }
+        foreach ($excludeItem in $itemsToExclude) {
+            $excludeItemIds += $excludeItem.ID.ToString()
+            # Also mark all descendants for exclusion
+            $descendants = $allItems | Where-Object { $_.ItemPath -like "$($excludeItem.ItemPath)/*" }
+            $excludeItemIds += @($descendants | ForEach-Object { $_.ID.ToString() })
+        }
+    }
+
+    # Filter items: include matching templates AND exclude excluded items/children
+    $report = $allItems |
+        Where-Object {
+            ($templateIdList -contains $_.TemplateID.ToString()) -and
+            ($excludeItemIds -notcontains $_.ID.ToString())
+        } |
         ForEach-Object {
             [PSCustomObject]@{
                 'Item ID' = $_.ID.ToString()

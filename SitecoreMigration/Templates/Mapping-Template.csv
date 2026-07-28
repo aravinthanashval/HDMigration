@@ -1,0 +1,4 @@
+Region Page,Region Page ID,Global Page,Global Page ID,Move to Local,New Path,Old Path ID,New Path ID
+/Products,{REGION-ID-1},{GLOBAL-ID-1},{GLOBAL-ID-1},,/Global/Products,{REGION-ID-1},{GLOBAL-ID-1}
+/Products/Incontinence,{REGION-ID-2},{GLOBAL-ID-2},{GLOBAL-ID-2},L,/Local/Products/Incontinence,{REGION-ID-2},{GLOBAL-ID-2}
+/Products/Incontinence/Female,{REGION-ID-3},{GLOBAL-ID-3},{GLOBAL-ID-3},,/Global/Products/Incontinence/Female,{REGION-ID-3},{GLOBAL-ID-3}

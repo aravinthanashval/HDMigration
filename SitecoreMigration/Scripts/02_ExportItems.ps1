@@ -13,7 +13,7 @@ Write-Host "╚═════════════════════�
 $result = Read-Variable -Parameters @(
     @{ Name = "RootPath"; Title = "Root Item Path"; Value = "/sitecore/content/HartmannDirect/Global/Home"; }
     @{ Name = "TemplateIds"; Title = "Template IDs to INCLUDE (paste one per line)"; Value = "{GUID-1}`n{GUID-2}`n{GUID-3}"; Lines = 15; }
-    @{ Name = "ExcludeTemplateIds"; Title = "Template IDs to EXCLUDE + children (optional, paste one per line)"; Value = ""; Lines = 5; }
+    @{ Name = "ExcludeTemplateIds"; Title = "Template IDs to EXCLUDE + children (optional, paste one per line)"; Value = "{8C58B2C2-DF3E-4802-9AE8-9A425A0EC544}"; Lines = 5; }
 ) -Title "Item Export - Filter by Templates" -Width 800 -Height 700 -OkButtonName "Export" -CancelButtonName "Cancel"
 
 if ($result -ne "ok") {
